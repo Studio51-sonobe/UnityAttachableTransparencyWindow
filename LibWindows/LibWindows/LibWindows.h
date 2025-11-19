@@ -9,12 +9,26 @@
 #define DLL_EXPORT extern "C" __declspec(dllimport)
 #endif
 
+#pragma pack(push, 1)
+struct TSubWindowEvent
+{
+    int index;
+    UINT msg;
+    int x;
+    int y;
+};
+#pragma pack(pop)
+
 typedef void(* LogCallback)( const char*);
+typedef void(* SubWindowEventCallback)( TSubWindowEvent ev);
+
 
 DLL_EXPORT void DLL_API NOP();
 DLL_EXPORT void DLL_API SetLogCallback( LogCallback logCallback);
 
-DLL_EXPORT void DLL_API Initialize( HWND hWnd);
+DLL_EXPORT void DLL_API Initialize( HWND hWnd, int subWindowMaxCount);
 DLL_EXPORT void DLL_API Terminate();
-DLL_EXPORT DWORD DLL_API CreateSubWindow( ID3D11Texture2D *pTexture, int width, int height);
-DLL_EXPORT void DLL_API DisposeSubWindow( DWORD windowIndex);
+DLL_EXPORT int DLL_API CreateSubWindow( 
+    ID3D11Texture2D *pTexture, int width, int height, 
+    SubWindowEventCallback pCallback);
+DLL_EXPORT void DLL_API DisposeSubWindow( int windowIndex);

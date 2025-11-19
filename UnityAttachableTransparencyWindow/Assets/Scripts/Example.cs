@@ -9,7 +9,7 @@ public class Example : MonoBehaviour
 	#if !UNITY_EDITOR
 		m_LogCallback = msg => UnityEngine.Debug.LogError( "[Native] " + msg);
 		LibWindows.SetLogCallback( m_LogCallback);
-		LibWindows.Initialize( System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle);
+		LibWindows.Initialize( System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle, 2);
 	#endif
 	}
 	void OnDestroy()
@@ -18,32 +18,27 @@ public class Example : MonoBehaviour
 	}
 	void Update()
 	{
-		if( m_Cube != null)
+		if( Input.GetKeyUp( KeyCode.Alpha1) != false)
 		{
-			/* なんか動きが欲しかっただけ */
-			m_Cube.localEulerAngles = new Vector3( 
-				m_Cube.localEulerAngles.x, 
-				(m_Cube.localEulerAngles.y + 1) % 360, 
-				m_Cube.localEulerAngles.z);
+			m_UI1.Enable();
 		}
-		if( Input.GetMouseButtonDown( 0) != false)
+		else if( Input.GetKeyUp( KeyCode.Keypad1) != false)
 		{
-			if( m_Camera.targetTexture != null)
-			{
-				Debug.LogError( LibWindows.CreateSubWindow(
-					m_Camera.targetTexture.GetNativeTexturePtr(),
-					m_Camera.targetTexture.width, m_Camera.targetTexture.height));
-			}
+			m_UI1.Disable();
 		}
-		else if( Input.GetMouseButtonDown( 1) != false)
+		else if( Input.GetKeyUp( KeyCode.Alpha2) != false)
 		{
-			LibWindows.DisposeSubWindow( 0);
+			m_UI2.Enable();
+		}
+		else if( Input.GetKeyUp( KeyCode.Keypad2) != false)
+		{
+			m_UI2.Disable();
 		}
 	}
 	[SerializeField]
-	Camera m_Camera;
+	SubWindow m_UI1;
 	[SerializeField]
-	Transform m_Cube;
+	SubWindow m_UI2;
 	
 	static LibWindows.LogDelegate m_LogCallback;
 }
