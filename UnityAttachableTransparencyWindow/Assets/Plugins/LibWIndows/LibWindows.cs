@@ -16,7 +16,8 @@ public static class LibWindows
 	public static extern void Terminate();
 	[DllImport( "LibWindows", CallingConvention = CallingConvention.Winapi)]
 	public static extern uint CreateSubWindow( IntPtr texturePtr, int width, int height);
+	[DllImport( "LibWindows", CallingConvention = CallingConvention.Winapi)]
+	public static extern void DisposeSubWindow( uint windowIndex);
 	
-	// public static extern void DisposeSubWindow( uint handle);
 	// public static extern bool TryGetSubWindowInfo( uint handle, out Info info);
 }

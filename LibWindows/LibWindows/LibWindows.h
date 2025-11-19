@@ -17,3 +17,4 @@ DLL_EXPORT void DLL_API SetLogCallback( LogCallback logCallback);
 DLL_EXPORT void DLL_API Initialize( HWND hWnd);
 DLL_EXPORT void DLL_API Terminate();
 DLL_EXPORT DWORD DLL_API CreateSubWindow( ID3D11Texture2D *pTexture, int width, int height);
+DLL_EXPORT void DLL_API DisposeSubWindow( DWORD windowIndex);

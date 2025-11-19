@@ -58,6 +58,36 @@ LRESULT CALLBACK WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 	return CallWindowProc( s_DefaultWindowProc, hWnd, msg, wParam, lParam);
 }
+int GetEmptyWindowIndex()
+{
+	TSubWindow *pWindow = NULL;
+
+	for( int i0 = 0; i0 < s_SubWindowMaxCount; ++i0)
+	{
+		pWindow = &s_pSubWindows[ i0];
+
+		if( pWindow->hWnd == NULL)
+		{
+			return i0;
+		}
+	}
+	return -1;
+}
+DWORD WINAPI RenderThread( void *pArgs)
+{
+	TSubWindow *pWindow = (TSubWindow *)pArgs;
+	ID3D11Texture2D *pBackBuffer;
+
+	while( pWindow->threadKeep != FALSE)
+	{
+		pWindow->pSwapChain->GetBuffer( 0, __uuidof( ID3D11Texture2D), (void **)&pBackBuffer);
+		pWindow->pContext->CopyResource( pBackBuffer, pWindow->pTexture);
+		pWindow->pSwapChain->Present( 1, 0);
+		pBackBuffer->Release();
+		Sleep( 16);
+	}
+	return 0;
+}
 void DLL_API Initialize( HWND hWnd)
 {
 	if( s_pSubWindows == NULL)
@@ -72,8 +102,8 @@ void DLL_API Initialize( HWND hWnd)
 	if( s_CurrentWindowHandle == NULL && hWnd != NULL)
 	{
 		s_CurrentWindowHandle = hWnd;
-		s_DefaultWindowProc = (WNDPROC)SetWindowLongPtrA(
-			s_CurrentWindowHandle, GWLP_WNDPROC, (LONG_PTR)WndProc);
+		//s_DefaultWindowProc = (WNDPROC)SetWindowLongPtrA(
+		//	s_CurrentWindowHandle, GWLP_WNDPROC, (LONG_PTR)WndProc);
 
 		//COLORREF cref = { 0 };
 		//SetLayeredWindowAttributes( s_CurrentWindowHandle, cref, 0xff, LWA_ALPHA);
@@ -107,15 +137,9 @@ void DLL_API Terminate()
 {
 	if( s_pSubWindows != NULL)
 	{
-		for( int i0 = 0; i0 < s_SubWindowMaxCount; ++i0)
+		for( int i0 = 1; i0 <= s_SubWindowMaxCount; ++i0)
 		{
-			TSubWindow *pWindow = &s_pSubWindows[ i0];
-
-			if( pWindow != NULL && pWindow->pThreadHandle != NULL)
-			{
-				pWindow->threadKeep = FALSE;
-				WaitForSingleObject( pWindow->pThreadHandle, INFINITE);
-			}
+			DisposeSubWindow( i0);
 		}
 		free( s_pSubWindows);
 		s_pSubWindows = NULL;
@@ -127,100 +151,144 @@ void DLL_API Terminate()
 		s_DefaultWindowProc = NULL;
 	}
 }
-TSubWindow *GetEmptyWindow()
+DWORD DLL_API CreateSubWindow( ID3D11Texture2D *pTexture, int width, int height)
 {
-	TSubWindow *pWindow = NULL;
-
-	for( int i0 = 0; i0 < s_SubWindowMaxCount; ++i0)
+	if( s_CurrentWindowHandle == NULL || s_pSubWindows == NULL || pTexture == NULL)
 	{
-		pWindow = &s_pSubWindows[ i0];
-
-		if( pWindow->hWnd == NULL)
-		{
-			return pWindow;
-		}
+		return 9;
 	}
-	return NULL;
-}
+	int windowIndex = GetEmptyWindowIndex();
 
-DWORD WINAPI RenderThread( void *pArgs)
-{
-	TSubWindow *pWindow = (TSubWindow *)pArgs;
-	ID3D11Texture2D *pBackBuffer;
-
-	while( pWindow->threadKeep != FALSE)
+	if( windowIndex < 0)
 	{
-		pWindow->pSwapChain->GetBuffer( 0, __uuidof( ID3D11Texture2D), (void **)&pBackBuffer);
-		pWindow->pContext->CopyResource( pBackBuffer, pWindow->pTexture);
-		pWindow->pSwapChain->Present( 1, 0);
-		pBackBuffer->Release();
-		Sleep( 16);
+		return 10;
 	}
-	return 0;
-}
-DWORD CreateSubWindow( ID3D11Texture2D *pTexture, int width, int height)
-{
-	if( s_CurrentWindowHandle == NULL)
-	{
-		return 1407;
-	}
-	TSubWindow *pWindow = GetEmptyWindow();
+	TSubWindow *pWindow = &s_pSubWindows[ windowIndex];
 
 	if( pWindow == NULL)
 	{
-		return 0;
+		return 11;
 	}
-	pWindow->pTexture = pTexture;
-	pWindow->hWnd = CreateWindowExW(
+	HMODULE hInstance = ::GetModuleHandleW( NULL);
+
+	if( hInstance == NULL)
+	{
+		return 12;
+	}
+	HWND hWnd = ::CreateWindowExW(
 		0,
 		SUB_WND_CLASS_NAME,
 		L"Un",
-		WS_DEFAULT_STYLE,
+		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
 		512, 512,
 		NULL, NULL,
-		GetModuleHandle(NULL),
+		hInstance,
 		NULL);
+	DWORD error = ::GetLastError();
 
-	if( pWindow->hWnd != NULL)
+	if( hWnd == NULL)
 	{
-		MARGINS margins1 = { -1 };
-		DwmExtendFrameIntoClientArea( pWindow->hWnd, &margins1);
-
-		DXGI_SWAP_CHAIN_DESC sd = {};
-		sd.BufferCount = 1;
-		sd.BufferDesc.Width = 512;
-		sd.BufferDesc.Height = 512;
-		sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		sd.OutputWindow = pWindow->hWnd;
-		sd.SampleDesc.Count = 1;
-		sd.Windowed = TRUE;
-
-		HRESULT hr = D3D11CreateDeviceAndSwapChain(
-			NULL,
-			D3D_DRIVER_TYPE_HARDWARE,
-			NULL,
-			0,
-			NULL, 0,
-			D3D11_SDK_VERSION,
-			&sd,
-			&pWindow->pSwapChain,
-			&pWindow->pDevice,
-			NULL,
-			&pWindow->pContext);
-
-		if( SUCCEEDED( hr))
-		{
-			ShowWindow( pWindow->hWnd, SW_SHOW);
-			pWindow->threadKeep = TRUE;
-			pWindow->pThreadHandle = CreateThread( NULL, 0, RenderThread, pWindow, 0, NULL);
-		}
+		char buf[ 256];
+		sprintf_s( buf, "0x%x", error);
+		Log( buf);
+		return 13;
 	}
 	else
 	{
-		return GetLastError();
+		pWindow->hWnd = hWnd;
+		pWindow->pTexture = pTexture;
+
+		HRESULT hr;
+		MARGINS margins1 = { -1 };
+
+		hr = DwmExtendFrameIntoClientArea( pWindow->hWnd, &margins1);
+		if FAILED( hr)
+		{
+			DestroyWindow( pWindow->hWnd);
+			pWindow->hWnd = NULL;
+			return 14;
+		}
+		else
+		{
+			DXGI_SWAP_CHAIN_DESC sd = {};
+			sd.BufferCount = 1;
+			sd.BufferDesc.Width = 512;
+			sd.BufferDesc.Height = 512;
+			sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			sd.OutputWindow = pWindow->hWnd;
+			sd.SampleDesc.Count = 1;
+			sd.Windowed = TRUE;
+
+			hr = D3D11CreateDeviceAndSwapChain(
+				NULL,
+				D3D_DRIVER_TYPE_HARDWARE,
+				NULL,
+				0,
+				NULL, 0,
+				D3D11_SDK_VERSION,
+				&sd,
+				&pWindow->pSwapChain,
+				&pWindow->pDevice,
+				NULL,
+				&pWindow->pContext);
+
+			if FAILED( hr)
+			{
+				DestroyWindow( pWindow->hWnd);
+				pWindow->hWnd = NULL;
+				return 15;
+			}
+			else
+			{
+				ShowWindow( pWindow->hWnd, SW_SHOW);
+				pWindow->threadKeep = TRUE;
+				pWindow->pThreadHandle = CreateThread( NULL, 0, RenderThread, pWindow, 0, NULL);
+			}
+		}
 	}
-	return 0;
+	return windowIndex + 1;
+}
+void DLL_API DisposeSubWindow( DWORD windowIndex)
+{
+	if( s_pSubWindows == NULL || windowIndex <= 0)
+	{
+		return;
+	}
+	TSubWindow *pWindow = &s_pSubWindows[ windowIndex - 1];
+
+	if( pWindow == NULL)
+	{
+		return;
+	}
+	if( pWindow->pThreadHandle != NULL)
+	{
+		pWindow->threadKeep = FALSE;
+		WaitForSingleObject( pWindow->pThreadHandle, INFINITE);
+		pWindow->pThreadHandle = NULL;
+	}
+	if( pWindow->pContext != NULL)
+	{
+		pWindow->pContext->ClearState();
+		pWindow->pContext->Flush();
+		pWindow->pContext->Release();
+		pWindow->pContext = NULL;
+	}
+	if( pWindow->pSwapChain != NULL)
+	{
+		pWindow->pSwapChain->Release();
+		pWindow->pSwapChain = NULL;
+	}
+	if( pWindow->pDevice != NULL)
+	{
+		pWindow->pDevice->Release();
+		pWindow->pDevice = NULL;
+	}
+	if( pWindow->hWnd != NULL)
+	{
+		DestroyWindow( pWindow->hWnd);
+		pWindow->hWnd = NULL;
+	}
 }
 

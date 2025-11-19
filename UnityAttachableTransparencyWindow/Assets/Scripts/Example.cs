@@ -35,6 +35,10 @@ public class Example : MonoBehaviour
 					m_Camera.targetTexture.width, m_Camera.targetTexture.height));
 			}
 		}
+		else if( Input.GetMouseButtonDown( 1) != false)
+		{
+			LibWindows.DisposeSubWindow( 0);
+		}
 	}
 	[SerializeField]
 	Camera m_Camera;
