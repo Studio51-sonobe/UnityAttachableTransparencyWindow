@@ -29,13 +29,26 @@ public class SubWindow : MonoBehaviour
 		if( m_Camera != null && m_InputModule != null && m_InputModule.SubWindowIndex < 0)
 		{
 			RenderTexture renderTexture = m_Camera.targetTexture;
-		
-			if( renderTexture != null)
-			{
-				m_InputModule.SubWindowIndex = LibWindows.CreateSubWindow( renderTexture.GetNativeTexturePtr(),
-					renderTexture.width, renderTexture.height, WindowsInputModule.OnSubWindowEventCallback);
-				return m_InputModule.SubWindowIndex >= 0;
-			}
+			// if( m_RenderTexture == null && m_Camera.targetTexture == null)
+			// {
+			// 	m_RenderTexture = new RenderTexture( 512, 512, 
+			// 		UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm, 
+			// 		UnityEngine.Experimental.Rendering.GraphicsFormat.D24_UNorm_S8_UInt, 1);
+				
+				if( renderTexture != null)
+				{
+					// m_Camera.targetTexture = m_RenderTexture;
+					m_InputModule.SubWindowIndex = LibWindows.CreateSubWindow( renderTexture.GetNativeTexturePtr(),
+						renderTexture.width, renderTexture.height, WindowsInputModule.OnSubWindowEventCallback);
+					if( m_InputModule.SubWindowIndex >= 0)
+					{
+						return true;
+					}
+				}
+				// m_Camera.targetTexture = null;
+				// m_RenderTexture.Release();
+				// m_RenderTexture = null;
+			// }
 		}
 		return false;
 	}
@@ -49,9 +62,23 @@ public class SubWindow : MonoBehaviour
 				m_InputModule.SubWindowIndex = -1;
 			}
 		}
+		// if( m_Camera.targetTexture != null)
+		// {
+		// 	m_Camera.targetTexture = null;
+		// }
+		// if( m_RenderTexture != null)
+		// {
+		// 	m_RenderTexture.Release();
+		// 	m_RenderTexture = null;
+		// }
 	}
 	void Update()
 	{
+		if( m_Canvas != null)
+		{
+			var canvasGraphics = GraphicRegistry.GetRaycastableGraphicsForCanvas( m_Canvas);
+			Debug.LogError( m_InputModule.SubWindowIndex + ", " + canvasGraphics.Count);
+		}
 		if( m_InputModule != null && m_Raycaster != null)
 		{
 			m_InputModule.Process( m_Raycaster);
@@ -60,7 +87,11 @@ public class SubWindow : MonoBehaviour
 	[SerializeField]
 	Camera m_Camera;
 	[SerializeField]
+	Canvas m_Canvas;
+	[SerializeField]
 	GraphicRaycaster m_Raycaster;
 	[SerializeField]
 	WindowsInputModule m_InputModule;
+	[System.NonSerialized]
+	RenderTexture m_RenderTexture;
 }

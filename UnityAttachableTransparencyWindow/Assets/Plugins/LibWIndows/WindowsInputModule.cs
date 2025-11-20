@@ -37,14 +37,6 @@ public class WindowsInputModule : BaseInputModule
 		
 		GameObject hit = results.Count > 0 ? results[ 0].gameObject : null;
 		
-		Debug.LogError( results.Count);
-		
-		// eventSystem.RaycastAll( pointerEventData, m_RaycastResultCache);
-        // RaycastResult raycast = FindFirstRaycast( m_RaycastResultCache);
-        // pointerEventData.pointerCurrentRaycast = raycast;
-		
-		// Debug.LogError( SubWindowIndex + ", " + gameObject.name + ", " + m_MousePosition + ", " + raycast);
-		
 		if( (m_MouseClickFlags & 0x01) != 0)
         {
 			pointerEventData.pointerPressRaycast = results.Count > 0 ? results[0] : new RaycastResult();
@@ -63,7 +55,7 @@ public class WindowsInputModule : BaseInputModule
 			pointerEventData.pointerPress = null;
             m_MouseClickFlags &= ~0x02;
         }
-		ExecuteEvents.Execute(hit, pointerEventData, ExecuteEvents.pointerMoveHandler);
+		ExecuteEvents.Execute( hit, pointerEventData, ExecuteEvents.pointerMoveHandler);
 	}
 	void OnSubWindowEventDelegate( LibWindows.SubWindowEvent ev)
 	{

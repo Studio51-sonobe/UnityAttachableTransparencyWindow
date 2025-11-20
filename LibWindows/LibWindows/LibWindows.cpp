@@ -129,14 +129,18 @@ DWORD WINAPI RenderThread( void *pArgs)
 {
 	TSubWindow *pWindow = (TSubWindow *)pArgs;
 	ID3D11Texture2D *pBackBuffer;
+	HRESULT hr;
 
 	while( pWindow->threadKeep != FALSE)
 	{
-		pWindow->pSwapChain->GetBuffer( 0, __uuidof( ID3D11Texture2D), (void **)&pBackBuffer);
-		pWindow->pContext->CopyResource( pBackBuffer, pWindow->pTexture);
-		pWindow->pSwapChain->Present( 1, 0);
-		pBackBuffer->Release();
-		Sleep( 15);
+		hr = pWindow->pSwapChain->GetBuffer( 0, __uuidof( ID3D11Texture2D), (void **)&pBackBuffer);
+		if ( SUCCEEDED( hr) && pBackBuffer != NULL)
+		{
+			pWindow->pContext->CopyResource( pBackBuffer, pWindow->pTexture);
+			pWindow->pSwapChain->Present( 1, 0);
+			pBackBuffer->Release();
+		}
+		Sleep( 16);
 	}
 	return 0;
 }
